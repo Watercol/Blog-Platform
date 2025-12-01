@@ -10,11 +10,10 @@ const runMigrations = async () => {
 
   try {
     const migrationsDir = path.resolve(process.cwd(), 'db/migrations');
-    const files = await globby('*.sql', {
+    const files = (await globby('*.sql', {
       cwd: migrationsDir,
-      absolute: true,
-      sort: true
-    });
+      absolute: true
+    })).sort();
 
     for (const file of files) {
       const sql = await fs.readFile(file, 'utf-8');

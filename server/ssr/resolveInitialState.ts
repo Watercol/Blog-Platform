@@ -35,7 +35,7 @@ export const resolveInitialState = async (
       };
     }
 
-    const detailMatch = detailMatcher(pathname);
+    const detailMatch = detailMatcher(pathname) as import('path-to-regexp').Match<{ slug: string }>;
     if (detailMatch) {
       const slug = detailMatch.params.slug;
 

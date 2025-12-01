@@ -8,6 +8,7 @@ export interface AppDependencies {
 
 export const createDependencies = async (config: AppConfig): Promise<AppDependencies> => {
   const pool = createPool(config.database);
+  console.log('Database pool created');
   return {
     pool
   };
@@ -15,4 +16,5 @@ export const createDependencies = async (config: AppConfig): Promise<AppDependen
 
 export const destroyDependencies = async (deps: AppDependencies): Promise<void> => {
   await deps.pool.end();
+  console.log('Database pool closed');
 };

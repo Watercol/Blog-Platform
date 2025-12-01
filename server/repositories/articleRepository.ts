@@ -142,7 +142,7 @@ export const findArticles = async (
 
   const [[{ total }]] = await pool.query<Array<{ total: number } & RowDataPacket>>(
     `SELECT COUNT(DISTINCT a.id) AS total FROM articles a
-     ${clause.replaceAll('a.', 'a.')} `,
+     ${clause} `,
     params
   );
 

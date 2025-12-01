@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server/index.ts",
+    "dev": "tsx watch --ignore \"vite.config.ts.timestamp-*\" server/index.ts",
     "dev:db": "tsx server/scripts/run-migrations.ts",
     "build": "rimraf dist && tsc -p tsconfig.server.json && vite build && vite build --ssr src/entries/server.tsx",
     "start": "node dist/server/index.js",
@@ -47,6 +47,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.8",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "@types/serialize-javascript": "^5.0.4"
   }
 }

@@ -157,7 +157,7 @@ export const createSsrMiddleware = async (
 
   if (vite) {
     return (req, res, next) => {
-      vite!.middlewares(req, res, (viteErr) => {
+      vite!.middlewares(req, res, (viteErr: Error) => {
         if (viteErr) {
           next(viteErr);
           return;
