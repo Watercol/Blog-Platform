@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import type { PaginatedArticles } from '@shared/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Alert, Button, Empty, List, Pagination, Select } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import type { PaginatedArticles, Tag } from '@shared/types';
 import { ArticleCard } from '../components/ArticleCard';
 import { useInitialData } from '../state/InitialDataContext';
 import { useArticlesApi } from '../hooks/useArticlesApi';
@@ -9,10 +11,13 @@ const DEFAULT_PAGE_SIZE = 10;
 
 export const ArticleListPage = () => {
   const { state, setListData } = useInitialData();
-  const { getArticles } = useArticlesApi();
+  const { getArticles, getTags } = useArticlesApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const lastLoadedParams = useRef<{ page: number; pageSize: number; tag?: string } | null>(null);
 
   const page = useMemo(() => Number(searchParams.get('page') ?? '1') || 1, [searchParams]);
   const pageSize = useMemo(
@@ -23,16 +28,75 @@ export const ArticleListPage = () => {
 
   const listData: PaginatedArticles | undefined = state.view === 'list' ? state.listData : undefined;
 
+  const tagOptions = useMemo(() => {
+    const options = tags
+      .map((tagItem) => ({ value: tagItem.slug, label: tagItem.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    if (tag && !options.some((option) => option.value === tag)) {
+      options.push({ value: tag, label: tag });
+    }
+    return options;
+  }, [tags, tag]);
+
   useEffect(() => {
     let ignore = false;
+
+    const loadTags = async () => {
+      try {
+        setTagsLoading(true);
+        const fetched = await getTags();
+        if (!ignore) {
+          setTags(fetched);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : '加载标签失败');
+        }
+      } finally {
+        if (!ignore) {
+          setTagsLoading(false);
+        }
+      }
+    };
+
+    loadTags();
+
+    return () => {
+      ignore = true;
+    };
+  }, [getTags]);
+
+  useEffect(() => {
+    if (listData && !lastLoadedParams.current) {
+      lastLoadedParams.current = {
+        page: listData.meta.page,
+        pageSize: listData.meta.pageSize,
+        tag
+      };
+    }
+  }, [listData, tag]);
+
+  useEffect(() => {
+    let ignore = false;
+    const paramsKey = { page, pageSize, tag };
+    const matchesLast =
+      !!lastLoadedParams.current &&
+      lastLoadedParams.current.page === paramsKey.page &&
+      lastLoadedParams.current.pageSize === paramsKey.pageSize &&
+      lastLoadedParams.current.tag === paramsKey.tag;
+
+    if (listData && matchesLast) {
+      return;
+    }
 
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getArticles({ page, pageSize, tag });
+        const data = await getArticles(paramsKey);
         if (!ignore) {
           setListData(data);
+          lastLoadedParams.current = paramsKey;
         }
       } catch (err) {
         if (!ignore) {
@@ -45,26 +109,18 @@ export const ArticleListPage = () => {
       }
     };
 
-    const isInitialMatch =
-      listData &&
-      listData.meta.page === page &&
-      listData.meta.pageSize === pageSize &&
-      (tag ? listData.items.some((item) => item.tags.some((articleTag) => articleTag.slug === tag)) : true);
-
-    if (!isInitialMatch) {
-      load();
-    }
+    load();
 
     return () => {
       ignore = true;
     };
   }, [getArticles, listData, page, pageSize, setListData, tag]);
 
-  const handleChangePage = (nextPage: number) => {
+  const handlePaginationChange = (nextPage: number, nextPageSize?: number) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       params.set('page', String(nextPage));
-      params.set('pageSize', String(pageSize));
+      params.set('pageSize', String(nextPageSize ?? pageSize));
       return params;
     });
   };
@@ -78,67 +134,71 @@ export const ArticleListPage = () => {
         params.delete('tag');
       }
       params.set('page', '1');
-       params.set('pageSize', String(pageSize));
+      params.set('pageSize', String(pageSize));
       return params;
     });
-  };
-
-  const renderList = () => {
-    if (loading && !listData) {
-      return <p>正在加载文章...</p>;
-    }
-
-    if (error) {
-      return <p>出现错误：{error}</p>;
-    }
-
-    if (!listData || listData.items.length === 0) {
-      return <p>暂无文章，去创建一篇吧。</p>;
-    }
-
-    return (
-      <>
-        {listData.items.map((article) => (
-          <ArticleCard key={article.id} article={article} />
-        ))}
-        <div className="pagination">
-          <button
-            className="button"
-            type="button"
-            disabled={listData.meta.page <= 1 || loading}
-            onClick={() => handleChangePage(listData.meta.page - 1)}
-          >
-            上一页
-          </button>
-          <span>
-            第 {listData.meta.page} / {listData.meta.totalPages} 页
-          </span>
-          <button
-            className="button"
-            type="button"
-            disabled={listData.meta.page >= listData.meta.totalPages || loading}
-            onClick={() => handleChangePage(listData.meta.page + 1)}
-          >
-            下一页
-          </button>
-        </div>
-      </>
-    );
-  };
+  }; 
 
   return (
-    <main>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <div>
-          <button className="button" type="button" onClick={() => handleSelectTag(undefined)}>
-            全部标签
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+      <div
+        style={{
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h2 style={{ margin: 0, width: 200, fontSize: '30px', fontWeight: 600, lineHeight: 1.35 }}>
+            文章列表
+          </h2>
+          <Select
+            allowClear
+            placeholder="按标签筛选"
+            style={{ width: 200 }}
+            value={tag}
+            onChange={handleSelectTag}
+            options={tagOptions}
+            loading={tagsLoading}
+          />
         </div>
-        <div>
-          <span>每页 {pageSize} 条</span>
-        </div>
+        <Link to="/articles/new">
+          <Button type="primary" icon={<PlusOutlined />}>
+            新增文章
+          </Button>
+        </Link>
       </div>
-      {renderList()}
-    </main>
+
+      {error ? (
+        <Alert type="error" message={error} showIcon />
+      ) : null}
+
+      <List
+        itemLayout="vertical"
+        dataSource={listData?.items ?? []}
+        loading={loading && !error}
+        renderItem={(article) => (
+          <List.Item key={article.id}>
+            <ArticleCard article={article} />
+          </List.Item>
+        )}
+        locale={{ emptyText: <Empty description="暂无文章" /> }}
+      />
+
+      {listData && listData.meta.totalItems > 0 ? (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            current={listData.meta.page}
+            pageSize={listData.meta.pageSize}
+            total={listData.meta.totalItems}
+            showSizeChanger={false}
+            onChange={handlePaginationChange}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 };

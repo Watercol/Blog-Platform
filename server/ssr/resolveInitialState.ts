@@ -6,6 +6,7 @@ import { listArticlesQuerySchema } from '../api/validators/articleSchemas';
 import type { AppInitialState } from '@shared/types';
 
 const listMatcher = match('/', { decode: decodeURIComponent, end: true });
+const createMatcher = match('/articles/new', { decode: decodeURIComponent, end: true });
 const detailMatcher = match('/articles/:slug', { decode: decodeURIComponent });
 
 export interface ResolveResult {
@@ -30,6 +31,16 @@ export const resolveInitialState = async (
         state: {
           view: 'list',
           listData
+        },
+        status: 200
+      };
+    }
+
+    const createMatch = createMatcher(pathname);
+    if (createMatch) {
+      return {
+        state: {
+          view: 'create'
         },
         status: 200
       };

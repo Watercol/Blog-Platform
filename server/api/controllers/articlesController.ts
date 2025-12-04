@@ -11,6 +11,7 @@ import {
   createArticle,
   deleteArticles,
   getArticleDetail,
+  listAllTags,
   listArticles,
   updateArticle
 } from '../../services/articleService';
@@ -34,6 +35,15 @@ export const createArticlesController = (deps: AppDependencies) => {
       const query = listArticlesQuerySchema.parse(req.query);
       const data = await listArticles(deps.pool, query);
       res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const listTags = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tags = await listAllTags(deps.pool);
+      res.json(tags);
     } catch (error) {
       next(error);
     }
@@ -119,6 +129,7 @@ export const createArticlesController = (deps: AppDependencies) => {
 
   return {
     list,
+    listTags,
     detail,
     detailBySlug,
     create,

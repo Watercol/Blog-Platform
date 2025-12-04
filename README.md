@@ -10,7 +10,7 @@
 - **工程能力**：TypeScript 全覆盖、Vite 构建、Vitest 测试、ESLint/Prettier 规范。
 
 ### 技术栈
-- **前端**：React 18、React Router、Vite（SSR + SWC）、Day.js
+- **前端**：React 18、React Router、Vite（SSR + SWC）、Ant Design 5、Day.js
 - **后端**：Express、mysql2/promise、Zod、Node.js (>= 18)
 - **工具链**：TypeScript、Vitest、ESLint、Prettier、tsx、globby
 

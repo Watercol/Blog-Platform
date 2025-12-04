@@ -48,7 +48,7 @@ export interface ArticleMutationPayload {
 }
 
 export interface AppInitialState {
-  view: 'list' | 'detail' | 'not-found' | 'error';
+  view: 'list' | 'detail' | 'create' | 'not-found' | 'error';
   listData?: PaginatedArticles;
   detailData?: ArticleDetail;
   error?: {

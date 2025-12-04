@@ -7,6 +7,7 @@ import {
   findArticleById,
   findArticles as findArticleRecords,
   findArticleBySlug,
+  findAllTags,
   isSlugTaken,
   recordView
 } from '../repositories/articleRepository';
@@ -14,7 +15,8 @@ import type {
   ArticleDetail,
   ArticleMutationPayload,
   ArticleSummary,
-  PaginatedArticles
+  PaginatedArticles,
+  Tag
 } from '@shared/types';
 import type { ArticleListFilters } from '../repositories/articleRepository';
 
@@ -142,3 +144,7 @@ export const toSummaryList = (detail: ArticleDetail): ArticleSummary => ({
   tags: detail.tags,
   readingMinutes: detail.readingMinutes
 });
+
+export const listAllTags = async (pool: Pool): Promise<Tag[]> => {
+  return findAllTags(pool);
+};

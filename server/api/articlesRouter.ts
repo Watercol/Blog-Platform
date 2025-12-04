@@ -7,6 +7,7 @@ export const createArticlesRouter = (deps: AppDependencies) => {
   const controller = createArticlesController(deps);
 
   router.get('/', controller.list);
+  router.get('/tags', controller.listTags);
   router.get('/slug/:slug', controller.detailBySlug);
   router.get('/:id', controller.detail);
   router.post('/', controller.create);

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { PaginatedArticles, ArticleDetail } from '@shared/types';
+import type { PaginatedArticles, ArticleDetail, ArticleMutationPayload, Tag } from '@shared/types';
 
 const buildQuery = (params: Record<string, unknown>) => {
   const query = new URLSearchParams();
@@ -35,6 +35,10 @@ export const useArticlesApi = () => {
     return fetchJson<ArticleDetail>(`/api/articles/slug/${slug}`);
   }, []);
 
+  const getTags = useCallback(async () => {
+    return fetchJson<Tag[]>(`/api/articles/tags`);
+  }, []);
+
   const removeArticles = useCallback(async (ids: number[], hardDelete = false) => {
     const query = buildQuery({ ids: ids.join(','), hard: hardDelete });
     return fetchJson<{ affected: number }>(`/api/articles${query}`, {
@@ -42,9 +46,21 @@ export const useArticlesApi = () => {
     });
   }, []);
 
+  const createArticle = useCallback(async (payload: ArticleMutationPayload) => {
+    return fetchJson<{ id: number; slug: string }>(`/api/articles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+  }, []);
+
   return {
     getArticles,
     getArticleBySlug,
-    removeArticles
+    getTags,
+    removeArticles,
+    createArticle
   };
 };

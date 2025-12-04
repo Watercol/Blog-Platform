@@ -1,12 +1,21 @@
+import { Result, Button } from 'antd';
+import { Link } from 'react-router-dom';
+
 interface ErrorPageProps {
   message?: string;
 }
 
 export const ErrorPage = ({ message }: ErrorPageProps) => {
   return (
-    <main>
-      <h1>发生错误</h1>
-      <p>{message ?? '请求处理失败，请稍后再试。'}</p>
-    </main>
+    <Result
+      status="error"
+      title="发生错误"
+      subTitle={message ?? '请求处理失败，请稍后再试。'}
+      extra={
+        <Link to="/">
+          <Button type="primary">返回首页</Button>
+        </Link>
+      }
+    />
   );
 };

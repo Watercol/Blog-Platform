@@ -19,6 +19,6 @@ export default defineConfig(({ isSsrBuild }) => ({
     }
   },
   ssr: {
-    noExternal: ['react-router-dom']
+    noExternal: ['react-router-dom', 'antd', '@ant-design/icons', '@ant-design/cssinjs']
   }
 }));

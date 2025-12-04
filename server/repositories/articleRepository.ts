@@ -204,6 +204,14 @@ export const isSlugTaken = async (
   return rows[0]?.count > 0;
 };
 
+export const findAllTags = async (pool: Pool): Promise<Tag[]> => {
+  const [rows] = await pool.query<Array<Tag & RowDataPacket>>(
+    'SELECT id, name, slug FROM tags ORDER BY name ASC'
+  );
+
+  return rows;
+};
+
 const ensureTags = async (connection: PoolConnection, tags: string[]): Promise<Tag[]> => {
   if (!tags.length) {
     return [];

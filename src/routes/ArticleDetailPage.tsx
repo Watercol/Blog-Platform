@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { Button, Card, Result, Skeleton, Space, Tag, Typography } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import type { ArticleDetail } from '@shared/types';
 import { useInitialData } from '../state/InitialDataContext';
 import { useArticlesApi } from '../hooks/useArticlesApi';
@@ -10,7 +12,15 @@ export const ArticleDetailPage = () => {
   const navigate = useNavigate();
   const { state, setDetailData } = useInitialData();
   const { getArticleBySlug } = useArticlesApi();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    if (!slug) {
+      return false;
+    }
+    if (state.view !== 'detail' || !state.detailData) {
+      return true;
+    }
+    return state.detailData.slug !== slug;
+  });
   const [error, setError] = useState<string | null>(null);
 
   const detail: ArticleDetail | undefined = useMemo(() => {
@@ -60,62 +70,81 @@ export const ArticleDetailPage = () => {
 
   if (!slug) {
     return (
-      <main>
-        <p>参数错误，缺少文章标识。</p>
-        <button className="button" type="button" onClick={() => navigate('/')}>返回列表</button>
-      </main>
+      <Result
+        status="warning"
+        title="缺少文章标识"
+        subTitle="参数错误，缺少有效的文章标识。"
+        extra={
+          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>返回首页</Button>
+        }
+      />
     );
   }
 
   if (loading && !detail) {
     return (
-      <main>
-        <p>正在加载文章...</p>
-      </main>
+      <Card bordered={false}>
+        <Skeleton active paragraph={{ rows: 6 }} title />
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <main>
-        <p>出现错误：{error}</p>
-        <button className="button" type="button" onClick={() => navigate('/')}>返回列表</button>
-      </main>
+      <Result
+        status="error"
+        title="加载文章失败"
+        subTitle={error}
+        extra={
+          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>返回首页</Button>
+        }
+      />
     );
   }
 
   if (!detail) {
     return (
-      <main>
-        <p>未找到文章。</p>
-        <button className="button" type="button" onClick={() => navigate('/')}>返回列表</button>
-      </main>
+      <Result
+        status="404"
+        title="未找到文章"
+        subTitle="文章可能已删除或尚未发布。"
+        extra={
+          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>返回首页</Button>
+        }
+      />
     );
   }
 
   return (
-    <main>
-      <button className="button" type="button" onClick={() => navigate(-1)} style={{ marginBottom: '1rem' }}>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
         返回上一页
-      </button>
-      <div className="detail-content">
-        <header>
-          <h1>{detail.title}</h1>
-          <div className="article-meta" style={{ marginBottom: '1rem' }}>
-            <span>作者：{detail.author}</span>
-            {detail.publishedAt ? <span> · 发布于 {dayjs(detail.publishedAt).format('YYYY年MM月DD日')}</span> : null}
-            <span> · 阅读量 {detail.viewCount}</span>
-          </div>
+      </Button>
+      <Card>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div>
-            {detail.tags.map((tag) => (
-              <Link key={tag.id} className="tag-pill" to={`/?tag=${tag.slug}`}>
-                #{tag.name}
-              </Link>
-            ))}
+            <Typography.Title level={2}>{detail.title}</Typography.Title>
+            <Typography.Text type="secondary">
+              作者：{detail.author}
+              {detail.publishedAt
+                ? ` · 发布于 ${dayjs(detail.publishedAt).format('YYYY年MM月DD日')}`
+                : ''}
+              · 阅读量 {detail.viewCount}
+            </Typography.Text>
           </div>
-        </header>
-        <article dangerouslySetInnerHTML={{ __html: detail.content }} />
-      </div>
-    </main>
+          <Space size={[8, 8]} wrap>
+            {detail.tags.map((tag) => (
+              <Tag key={tag.id}>
+                <Link to={`/?tag=${tag.slug}`}>#{tag.name}</Link>
+              </Tag>
+            ))}
+          </Space>
+          <div
+            style={{ lineHeight: 1.7, color: '#1f2933' }}
+            dangerouslySetInnerHTML={{ __html: detail.content }}
+          />
+        </Space>
+      </Card>
+    </Space>
   );
 };
