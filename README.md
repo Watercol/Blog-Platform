@@ -9,6 +9,11 @@
 - **前端交互**：分页、标签筛选、详情浏览等基础能力，统一使用 React Router。
 - **工程能力**：TypeScript 全覆盖、Vite 构建、Vitest 测试、ESLint/Prettier 规范。
 
+### 系统要求
+- Node.js >= 18
+- MySQL >= 5.7 或 MariaDB >= 10.3
+- npm >= 8 或 yarn >= 1.22
+
 ### 技术栈
 - **前端**：React 18、React Router、Vite（SSR + SWC）、Ant Design 5、Day.js
 - **后端**：Express、mysql2/promise、Zod、Node.js (>= 18)
@@ -51,6 +56,15 @@
 	cp .env.example .env
 	# 根据实际数据库环境调整 .env 内容
 	```
+	环境变量说明：
+	- `NODE_ENV`: 运行环境 (development/test/production)
+	- `PORT`: 服务端口，默认 5174
+	- `MYSQL_HOST`: MySQL 主机地址
+	- `MYSQL_PORT`: MySQL 端口号，默认 3306
+	- `MYSQL_USER`: MySQL 用户名
+	- `MYSQL_PASSWORD`: MySQL 密码
+	- `MYSQL_DATABASE`: MySQL 数据库名
+	- `MYSQL_CONNECTION_LIMIT`: MySQL 连接池大小限制，默认 10
 
 3. **初始化数据库**
 	```bash
@@ -70,16 +84,45 @@
 	npm run build
 	```
 	- 产物位于 `dist/client`（静态资源）与 `dist/ssr`（服务器渲染入口）
+	- 服务端代码位于 `dist/server`
 
 2. **启动生产服务**
 	```bash
 	npm run start
 	```
 
-### 质量保障
-- **代码检查**：`npm run lint`
-- **单元测试**：`npm run test`
-- **数据库迁移**：`npm run dev:db`
+### 目录结构说明
+```
+├── db/                        # 数据库相关文件
+│   └── migrations/            # SQL 迁移脚本
+├── dist/                      # 构建产物目录
+│   ├── client/                # 客户端构建产物（静态资源）
+│   ├── server/                # 服务端构建产物
+│   └── ssr/                   # SSR 构建产物
+├── public/                    # 静态资源占位目录
+├── server/                    # 服务端代码
+│   ├── api/                   # REST 路由与控制器
+│   ├── config/                # 环境变量、依赖上下文
+│   ├── db/                    # 连接池定义
+│   ├── middleware/            # 通用中间件
+│   ├── repositories/          # 数据访问层
+│   ├── scripts/               # 运维脚本（迁移）
+│   ├── services/              # 业务逻辑层
+│   └── ssr/                   # SSR 中间件与数据获取
+├── shared/                    # 前后端共享 TypeScript 类型
+├── src/                       # 客户端源代码
+│   ├── components/            # 可复用组件
+│   ├── entries/               # 客户端/服务端入口
+│   ├── hooks/                 # 自定义 hooks
+│   ├── routes/                # 页面组件
+│   ├── state/                 # 初始数据上下文
+│   └── styles/                # 全局样式
+├── .env.example               # 环境变量示例配置
+├── .gitignore                 # Git 忽略文件配置
+├── package.json               # 项目依赖和脚本配置
+├── tsconfig*.json             # TypeScript 配置文件
+└── vite.config.ts             # Vite 构建配置
+```
 
 ### API 速览
 | 方法 | 路径 | 描述 |
