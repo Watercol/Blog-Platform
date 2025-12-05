@@ -6,8 +6,6 @@ import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import type { ArticleStatus } from '@shared/types';
 import { useArticlesApi } from '../hooks/useArticlesApi';
 
-const DEFAULT_AUTHOR_ID = 1;
-
 interface FormValues {
   title: string;
   slug?: string;
@@ -16,7 +14,8 @@ interface FormValues {
   tags: string[];
   status: ArticleStatus;
   publishedAt?: Dayjs;
-  authorId: number;
+  authorName: string;
+  authorEmail: string;
 }
 
 export const ArticleCreatePage = () => {
@@ -50,7 +49,8 @@ export const ArticleCreatePage = () => {
           values.status === 'published'
             ? values.publishedAt?.format('YYYY-MM-DD HH:mm:ss') ?? null
             : null,
-        authorId: values.authorId
+        authorName: values.authorName,
+        authorEmail: values.authorEmail
       });
       messageApi.success('文章创建成功');
       navigate(`/articles/${response.slug}`);
@@ -76,13 +76,35 @@ export const ArticleCreatePage = () => {
         <Typography.Text type="secondary">请完善文章信息后提交。</Typography.Text>
       </Space>
       <Card>
-        <Form<FormValues>
+          <Form<FormValues>
           form={form}
           layout="vertical"
-          initialValues={{ status: 'draft', authorId: DEFAULT_AUTHOR_ID, tags: [] }}
+          initialValues={{ status: 'draft', tags: [] }}
           onFinish={handleFinish}
           onFinishFailed={handleFinishFailed}
         >
+          <Space size={24} style={{ width: '100%' }} wrap>
+            <Form.Item
+              label="作者姓名"
+              name="authorName"
+              rules={[{ required: true, message: '请输入作者姓名' }]}
+              style={{ flex: '1 1 200px' }}
+            >
+              <Input placeholder="例如：张三" />
+            </Form.Item>
+            <Form.Item
+              label="作者邮箱"
+              name="authorEmail"
+              rules={[
+                { required: true, message: '请输入作者邮箱' },
+                { type: 'email', message: '请输入有效的邮箱地址' }
+              ]}
+              style={{ flex: '1 1 200px' }}
+            >
+              <Input placeholder="例如：zhangsan@example.com" />
+            </Form.Item>
+          </Space>
+
           <Form.Item
             label="标题"
             name="title"
@@ -141,16 +163,6 @@ export const ArticleCreatePage = () => {
                 disabled={!isPublished}
                 placeholder={isPublished ? '留空则使用当前时间' : '仅在发布状态下生效'}
               />
-            </Form.Item>
-
-            <Form.Item
-              label="作者 ID"
-              name="authorId"
-              rules={[{ required: true, message: '请输入作者 ID' }]}
-              extra={`默认使用初始化迁移创建的作者（ID: ${DEFAULT_AUTHOR_ID}）。`}
-              style={{ flex: '1 1 200px' }}
-            >
-              <InputNumber min={1} style={{ width: '100%' }} />
             </Form.Item>
           </Space>
 

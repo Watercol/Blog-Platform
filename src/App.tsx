@@ -39,7 +39,7 @@ export const App = () => {
               margin: 0,
               fontSize: '24px',
               fontWeight: 600,
-              lineHeight: 1.35
+              lineHeight: 1.35,
             }}
           >
             SSR 博客平台

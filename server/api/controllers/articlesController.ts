@@ -52,7 +52,7 @@ export const createArticlesController = (deps: AppDependencies) => {
   const detail = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = articleIdParamSchema.parse(req.params);
-      const article = await getArticleDetail(deps.pool, id);
+      const article = await getArticleDetail(deps.pool, id, { recordView: true });
 
       if (!article) {
         res.status(404).json({ message: 'Article not found' });

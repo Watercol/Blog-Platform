@@ -13,10 +13,12 @@ export const ArticleListPage = () => {
   const { state, setListData } = useInitialData();
   const { getArticles, getTags } = useArticlesApi();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [loading, setLoading] = useState(false);
   const [tagsLoading, setTagsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
+  
   const lastLoadedParams = useRef<{ page: number; pageSize: number; tag?: string } | null>(null);
 
   const page = useMemo(() => Number(searchParams.get('page') ?? '1') || 1, [searchParams]);
@@ -140,7 +142,7 @@ export const ArticleListPage = () => {
   }; 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', margin: 5 }}>
       <div
         style={{
           display: 'flex',
@@ -151,8 +153,8 @@ export const ArticleListPage = () => {
           gap: '12px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, width: 200, fontSize: '30px', fontWeight: 600, lineHeight: 1.35 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', height: 40 }}>
+          <h2 style={{ margin: 0, width: 150, fontSize: '30px', fontWeight: 600, lineHeight: 1.35 }}>
             文章列表
           </h2>
           <Select
@@ -173,7 +175,7 @@ export const ArticleListPage = () => {
       </div>
 
       {error ? (
-        <Alert type="error" message={error} showIcon />
+        <Alert type="error" title={error} showIcon />
       ) : null}
 
       <List

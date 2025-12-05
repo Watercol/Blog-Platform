@@ -25,7 +25,12 @@ export const articleMutationSchema = z.object({
   tags: z.array(z.string().min(1)).max(20),
   status: z.enum(['draft', 'published']),
   publishedAt: z.string().datetime().nullish(),
-  authorId: z.coerce.number().int().positive()
+  authorId: z.coerce.number().int().positive().optional(),
+  authorName: z.string().min(1).max(120).optional(),
+  authorEmail: z.string().email().optional()
+}).refine((data) => data.authorId || (data.authorName && data.authorEmail), {
+  message: 'Either authorId or both authorName and authorEmail must be provided',
+  path: ['authorId']
 });
 
 export const bulkDeleteSchema = z.object({

@@ -44,7 +44,9 @@ export interface ArticleMutationPayload {
   tags: string[];
   status: ArticleStatus;
   publishedAt?: string | null;
-  authorId: number;
+  authorId?: number;
+  authorName?: string;
+  authorEmail?: string;
 }
 
 export interface AppInitialState {

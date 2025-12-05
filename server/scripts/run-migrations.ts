@@ -4,10 +4,12 @@ import { globby } from 'globby';
 import { appConfig } from '../config/env';
 import { createPool } from '../db/pool';
 
+//初始化数据库
 const runMigrations = async () => {
   const pool = createPool(appConfig.database);
   const connection = await pool.getConnection();
 
+  //按序执行sql文件
   try {
     const migrationsDir = path.resolve(process.cwd(), 'db/migrations');
     const files = (await globby('*.sql', {
@@ -16,13 +18,11 @@ const runMigrations = async () => {
     })).sort();
 
     for (const file of files) {
-      const sql = await fs.readFile(file, 'utf-8');
-      // eslint-disable-next-line no-console
+      const sql = await fs.readFile(file, 'utf-8'); 
       console.log(`Running migration: ${path.basename(file)}`);
       await connection.query(sql);
     }
 
-    // eslint-disable-next-line no-console
     console.log('Migrations completed successfully');
   } finally {
     connection.release();

@@ -26,7 +26,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     res
       .status(status)
       .send(
-        `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8" /><title>出错了</title></head><body><h1>服务器错误</h1><p>${safeMessage}</p></body></html>`
+        `服务器错误：${safeMessage}`
       );
     return;
   }

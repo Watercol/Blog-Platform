@@ -17,6 +17,7 @@ export const createApp = async (config: AppConfig, deps: AppDependencies) => {
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
+  //服务静态资源
   if (config.env === 'production') {
     const clientDir = path.resolve(process.cwd(), 'dist/client');
     app.use(
@@ -29,8 +30,10 @@ export const createApp = async (config: AppConfig, deps: AppDependencies) => {
     app.use(express.static(clientDir, { index: false }));
   }
 
+  //注册API路由
   app.use('/api', createApiRouter(deps));
 
+  //注册SSR中间件，用于服务端渲染React页面
   const ssrMiddleware = await createSsrMiddleware(config, deps);
   app.use(ssrMiddleware);
 

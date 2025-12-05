@@ -11,6 +11,7 @@ import {
   isSlugTaken,
   recordView
 } from '../repositories/articleRepository';
+import { findOrCreateUser } from '../repositories/userRepository';
 import type {
   ArticleDetail,
   ArticleMutationPayload,
@@ -88,6 +89,15 @@ export const createArticle = async (
   const slugBase = payload.slug ? payload.slug : slugify(payload.title);
   const slug = await ensureSlugUniqueness(pool, slugBase);
 
+  let authorId = payload.authorId;
+  if (!authorId && payload.authorName && payload.authorEmail) {
+    authorId = await findOrCreateUser(pool, payload.authorName, payload.authorEmail);
+  }
+
+  if (!authorId) {
+    throw new Error('Author information is missing');
+  }
+
   const id = await createArticleRecord(pool, {
     title: payload.title,
     slug,
@@ -95,7 +105,7 @@ export const createArticle = async (
     content: payload.content,
     status: payload.status,
     publishedAt: normalizePublishedAt(payload.status, payload.publishedAt),
-    authorId: payload.authorId,
+    authorId,
     readingMinutes: estimateReadingMinutes(payload.content),
     tags: payload.tags
   });
@@ -111,6 +121,15 @@ export const updateArticle = async (
   const slugBase = payload.slug ? payload.slug : slugify(payload.title);
   const slug = await ensureSlugUniqueness(pool, slugBase, id);
 
+  let authorId = payload.authorId;
+  if (!authorId && payload.authorName && payload.authorEmail) {
+    authorId = await findOrCreateUser(pool, payload.authorName, payload.authorEmail);
+  }
+
+  if (!authorId) {
+    throw new Error('Author information is missing');
+  }
+
   await updateArticleRecord(pool, id, {
     title: payload.title,
     slug,
@@ -118,7 +137,7 @@ export const updateArticle = async (
     content: payload.content,
     status: payload.status,
     publishedAt: normalizePublishedAt(payload.status, payload.publishedAt),
-    authorId: payload.authorId,
+    authorId,
     readingMinutes: estimateReadingMinutes(payload.content),
     tags: payload.tags
   });
