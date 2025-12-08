@@ -56,11 +56,23 @@ export const useArticlesApi = () => {
     });
   }, []);
 
+  // 更新文章方法
+  const updateArticle = useCallback(async (id: number, payload: ArticleMutationPayload) => {
+    return fetchJson<{ affected: number }>(`/api/articles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+  }, []);
+
   return {
     getArticles,
     getArticleBySlug,
     getTags,
     removeArticles,
-    createArticle
+    createArticle,
+    updateArticle
   };
 };
