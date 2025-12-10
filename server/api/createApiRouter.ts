@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import type { AppDependencies } from '../config/context';
 import { createArticlesRouter } from './createArticlesRouter';
-import { notFoundHandler } from '../middleware/notFound';
-import { errorHandler } from '../middleware/errorHandler';
+import { notFoundHandler } from '../errorMiddleware/notFound';
+import { errorHandler } from '../errorMiddleware/errorHandler';
 
 export const createApiRouter = (deps: AppDependencies) => {
   const router = Router();
