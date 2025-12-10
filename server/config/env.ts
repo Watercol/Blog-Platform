@@ -17,7 +17,8 @@ const envSchema = z.object({
   MYSQL_DATABASE: z.string().default('blog_platform'),
   MYSQL_CONNECTION_LIMIT: z
     .preprocess((value) => (value ? Number(value) : undefined), z.number().int().positive())
-    .default(10)
+    .default(10),
+  REDIS_URL: z.string().default('redis://localhost:6379')
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -39,12 +40,17 @@ export interface DatabaseConfig {
   connectionLimit: number;
 }
 
+export interface RedisConfig {
+  url: string;
+}
+
 export interface AppConfig {
   env: 'development' | 'test' | 'production';
   http: {
     port: number;
   };
   database: DatabaseConfig;
+  redis?: RedisConfig;
 }
 
 export const appConfig: AppConfig = {
@@ -59,6 +65,9 @@ export const appConfig: AppConfig = {
     password: parsed.data.MYSQL_PASSWORD,
     database: parsed.data.MYSQL_DATABASE,
     connectionLimit: parsed.data.MYSQL_CONNECTION_LIMIT
+  },
+  redis: {
+    url: parsed.data.REDIS_URL
   }
 };
 

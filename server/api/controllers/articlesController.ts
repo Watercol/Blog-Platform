@@ -33,7 +33,7 @@ export const createArticlesController = (deps: AppDependencies) => {
   const list = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = listArticlesQuerySchema.parse(req.query);
-      const data = await listArticles(deps.pool, query);
+      const data = await listArticles(deps.pool, query, deps.cache);
       res.json(data);
     } catch (error) {
       next(error);
@@ -84,7 +84,7 @@ export const createArticlesController = (deps: AppDependencies) => {
   const create = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const payload = articleMutationSchema.parse(req.body);
-      const result = await createArticle(deps.pool, payload);
+      const result = await createArticle(deps.pool, payload, deps.cache);
       res.status(201).json(result);
     } catch (error) {
       next(error);
@@ -95,7 +95,7 @@ export const createArticlesController = (deps: AppDependencies) => {
     try {
       const { id } = articleIdParamSchema.parse(req.params);
       const payload = articleMutationSchema.parse(req.body);
-      const result = await updateArticle(deps.pool, id, payload);
+      const result = await updateArticle(deps.pool, id, payload, deps.cache);
       res.json(result);
     } catch (error) {
       next(error);
@@ -107,7 +107,7 @@ export const createArticlesController = (deps: AppDependencies) => {
       if (req.params.id) {
         const { id } = articleIdParamSchema.parse(req.params);
         const hard = hardDeleteSchema.parse(req.query);
-        const affected = await deleteArticles(deps.pool, [id], { hardDelete: hard });
+        const affected = await deleteArticles(deps.pool, [id], { hardDelete: hard }, deps.cache);
         res.json({ affected });
         return;
       }
@@ -116,7 +116,7 @@ export const createArticlesController = (deps: AppDependencies) => {
         const idsParam = Array.isArray(req.query.ids) ? req.query.ids.join(',') : req.query.ids;
         const { ids } = bulkDeleteSchema.parse({ ids: idsParam });
         const hard = hardDeleteSchema.parse(req.query);
-        const affected = await deleteArticles(deps.pool, ids, { hardDelete: hard });
+        const affected = await deleteArticles(deps.pool, ids, { hardDelete: hard }, deps.cache);
         res.json({ affected });
         return;
       }
