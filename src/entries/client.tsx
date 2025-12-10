@@ -45,3 +45,35 @@ hydrateRoot(
     </StyleProvider>
   </StrictMode>
 );
+
+// 水合完成后移除防护类，显示内容
+const hydrationObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type === 'childList') {
+      const rootElement = document.getElementById('root');
+      if (rootElement) {
+        const hydrationGuard = rootElement.querySelector('.hydration-guard');
+        if (hydrationGuard) {
+          hydrationGuard.classList.add('hydrated');
+          hydrationObserver.disconnect();
+        }
+      }
+    }
+  });
+});
+
+hydrationObserver.observe(document.body, {
+  childList: true,
+  subtree: true
+});
+
+// 备用方案：延迟移除防护类
+setTimeout(() => {
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    const hydrationGuard = rootElement.querySelector('.hydration-guard');
+    if (hydrationGuard) {
+      hydrationGuard.classList.add('hydrated');
+    }
+  }
+}, 100);

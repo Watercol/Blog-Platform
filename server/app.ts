@@ -7,6 +7,8 @@ import type { AppDependencies } from './config/context';
 import { createApiRouter } from './api/createApiRouter';
 import { createSsrMiddleware } from './ssr/ssrMiddleware';
 import { errorHandler } from './errorMiddleware/errorHandler';
+import { staticCacheMiddleware } from './cacheMiddleware/staticCacheMiddleware';
+import { articleCacheMiddleware, articleListCacheMiddleware } from './cacheMiddleware/articleCacheMiddleware';
 
 export const createApp = async (config: AppConfig, deps: AppDependencies) => {
   const app = express();
@@ -17,19 +19,28 @@ export const createApp = async (config: AppConfig, deps: AppDependencies) => {
   app.use(express.urlencoded({ extended: true }));
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
-  //服务静态资源
+  //服务静态资源（应用缓存策略）
   if (config.env === 'production') {
+    // 使用静态缓存中间件服务静态资源
+    app.use('/assets', staticCacheMiddleware);
+    
+    // 其他静态文件也使用缓存
     const clientDir = path.resolve(process.cwd(), 'dist/client');
-    app.use(
-      '/assets',
-      express.static(path.join(clientDir, 'assets'), {
-        immutable: true,
-        maxAge: '1y'
-      })
-    );
+    app.use(express.static(clientDir, { 
+      index: false,
+      maxAge: '1h' // 非assets目录的静态文件缓存1小时
+    }));
+  } else {
+    // 开发环境也启用基础静态文件服务
+    const clientDir = path.resolve(process.cwd(), 'dist/client');
+    app.use('/assets', express.static(path.join(clientDir, 'assets')));
     app.use(express.static(clientDir, { index: false }));
   }
 
+  //应用文章API缓存中间件
+  app.use(articleCacheMiddleware);
+  app.use(articleListCacheMiddleware);
+  
   //注册API路由
   app.use('/api', createApiRouter(deps));
 

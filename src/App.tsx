@@ -12,14 +12,17 @@ export const App = () => {
   const { state } = useInitialData();
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh' }} className="hydration-guard">
       <Header
         style={{
           display: 'flex',
           alignItems: 'center',
           background: '#001529',
           height: 64,
-          padding: '0 24px'
+          padding: '0 24px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000
         }}
       >
         <Link
@@ -40,14 +43,27 @@ export const App = () => {
               fontSize: '24px',
               fontWeight: 600,
               lineHeight: 1.35,
+              minHeight: '1.35em' // 预设高度防止文本重排
             }}
           >
             SSR 博客平台
           </h3>
         </Link>
       </Header>
-      <Content style={{ background: '#f5f5f5', padding: '24px 16px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      <Content 
+        style={{ 
+          background: '#f5f5f5', 
+          padding: '24px 16px',
+          flex: 1,
+          minHeight: 'calc(100vh - 64px)' // 预设内容区域高度
+        }}
+        className="content-area"
+      >
+        <div style={{ 
+          maxWidth: 960, 
+          margin: '0 auto',
+          minHeight: '400px' // 预设最小高度
+        }}>
           {state.view === 'error' ? (
             <div style={{ marginBottom: 16 }}>
               <Alert type="error" title={state.error?.message ?? '服务器渲染出错，请刷新重试。'} />

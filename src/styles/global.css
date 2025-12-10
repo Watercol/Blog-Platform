@@ -2,13 +2,14 @@
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional; /* 改为optional避免字体切换导致的布局偏移 */
   src: url('https://fonts.gstatic.com/s/inter/v12/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa25L7W0Q5n-wU.woff2') format('woff2');
 }
 
 :root {
   color-scheme: light;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
 } 
 
 body {
@@ -16,10 +17,27 @@ body {
   min-height: 100vh;
   background: #ececec;
   color: #1f2933;
+  /* 防止滚动条出现导致的布局偏移 */
+  overflow-y: scroll;
 }
 
 #root {
   min-height: 100vh;
+  /* 确保根容器有明确的尺寸 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 防止图片加载导致的布局偏移 */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 为内容区域预设最小高度 */
+.content-area {
+  min-height: 400px;
 }
 
 a {
@@ -29,4 +47,13 @@ a {
 
 a:hover {
   color: #1677ff;
+}
+
+/* 防止水合过程中的布局偏移 */
+.hydration-guard {
+  visibility: hidden;
+}
+
+.hydration-guard.hydrated {
+  visibility: visible;
 }
