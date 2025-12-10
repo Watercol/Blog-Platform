@@ -1,54 +1,51 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Empty, List, Pagination, Select, Checkbox, message, Modal, Space, Input } from 'antd';
+import { Alert, Button, Empty, List, Select, Checkbox, message, Modal, Space, Spin, Input } from 'antd';
 import { PlusOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
-import type { PaginatedArticles, Tag } from '@shared/types';
+import type { Tag, ArticleSummary } from '@shared/types';
 import { ArticleCard } from '../components/ArticleCard';
-import { useInitialData } from '../state/InitialDataContext';
 import { useArticlesApi } from '../hooks/useArticlesApi';
 
-// 默认每页显示的文章数量
+// 默认每页加载的文章数量
 const DEFAULT_PAGE_SIZE = 10;
+// 无限滚动触发阈值（距离底部多少像素时触发加载）
+const SCROLL_THRESHOLD = 100;
 
 /**
  * 文章列表页面组件
  * 主要功能：
  * - 展示文章列表
- * - 支持分页浏览
+ * - 支持无限滚动浏览
  * - 按标签筛选文章
  * - 批量选择和删除文章
  * - 新增文章导航
  */
 export const ArticleListPage = () => {
-  // 使用初始数据上下文获取和设置列表数据
-  const { state, setListData } = useInitialData();
   // 使用文章API钩子获取文章相关操作方法
   const { getArticles, getTags, removeArticles } = useArticlesApi();
-  // 获取URL搜索参数和设置方法，用于分页和筛选
+  // 获取URL搜索参数和设置方法，用于筛选
   const [searchParams, setSearchParams] = useSearchParams();
 
   // 状态管理
-  const [loading, setLoading] = useState(false); // 文章列表加载状态
+  const [loading, setLoading] = useState(false); // 文章列表初始加载状态
+  const [loadingMore, setLoadingMore] = useState(false); // 加载更多文章状态
   const [tagsLoading, setTagsLoading] = useState(false); // 标签加载状态
   const [error, setError] = useState<string | null>(null); // 错误信息
   const [tags, setTags] = useState<Tag[]>([]); // 标签列表
   const [selectedArticles, setSelectedArticles] = useState<number[]>([]); // 选中的文章ID列表
   const [deleteLoading, setDeleteLoading] = useState(false); // 批量删除操作进行中状态
   
+  // 无限滚动相关状态
+  const [currentPage, setCurrentPage] = useState(1); // 当前页码
+  const [hasMore, setHasMore] = useState(true); // 是否还有更多数据
+  const [allArticles, setAllArticles] = useState<ArticleSummary[]>([]); // 所有已加载的文章
+  
   // 记录上次加载的参数，避免重复请求
   const lastLoadedParams = useRef<{ page: number; pageSize: number; tag?: string; search?: string } | null>(null);
 
-  // 从URL参数中解析当前页码、每页数量和标签筛选条件
-  const page = useMemo(() => Number(searchParams.get('page') ?? '1') || 1, [searchParams]);
-  const pageSize = useMemo(
-    () => Number(searchParams.get('pageSize') ?? String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE,
-    [searchParams]
-  );
+  // 从URL参数中解析筛选条件
   const tag = useMemo(() => searchParams.get('tag') ?? undefined, [searchParams]);
   const search = useMemo(() => searchParams.get('search') ?? undefined, [searchParams]);
-
-  // 从全局状态中获取当前的文章列表数据
-  const listData: PaginatedArticles | undefined = state.view === 'list' ? state.listData : undefined;
 
   // 生成标签选择器的选项列表
   const tagOptions = useMemo(() => {
@@ -62,23 +59,23 @@ export const ArticleListPage = () => {
     return options;
   }, [tags, tag]);
 
-  // 计算是否全选：检查当前页所有文章是否都被选中
+  // 计算是否全选：检查所有已加载文章是否都被选中
   const isAllSelected = useMemo(() => {
-    if (!listData?.items?.length) return false;
-    return listData.items.every(article => selectedArticles.includes(article.id));
-  }, [listData, selectedArticles]);
+    if (!allArticles.length) return false;
+    return allArticles.every(article => selectedArticles.includes(article.id));
+  }, [allArticles, selectedArticles]);
 
   // 计算是否部分选择：检查是否有部分文章被选中但不是全选
   const isIndeterminate = useMemo(() => {
-    if (!listData?.items?.length) return false;
-    return selectedArticles.length > 0 && selectedArticles.length < listData.items.length;
-  }, [listData, selectedArticles]);
+    if (!allArticles.length) return false;
+    return selectedArticles.length > 0 && selectedArticles.length < allArticles.length;
+  }, [allArticles, selectedArticles]);
 
   // 处理全选/全不选操作
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // 全选：将当前页所有文章的ID添加到选中列表
-      setSelectedArticles(listData?.items?.map(article => article.id) || []);
+      // 全选：将所有已加载文章的ID添加到选中列表
+      setSelectedArticles(allArticles.map(article => article.id));
     } else {
       // 取消全选：清空选中列表
       setSelectedArticles([]);
@@ -122,11 +119,8 @@ export const ArticleListPage = () => {
           // 清空选中状态
           setSelectedArticles([]);
           
-          // 重新加载当前页面的数据，更新列表显示
-          const data = await getArticles({ page, pageSize, tag });
-          setListData(data);
-          // 更新上次加载参数记录
-          lastLoadedParams.current = { page, pageSize, tag };
+          // 重新加载数据，更新列表显示
+          await loadArticles(1, true);
           
         } catch (err) {
           // 删除失败处理
@@ -137,6 +131,73 @@ export const ArticleListPage = () => {
       }
     });
   };
+
+  // 加载文章的函数
+  const loadArticles = useCallback(async (pageToLoad: number, reset = false) => {
+    // 如果正在加载或没有更多数据，则跳过
+    if (loadingMore || (pageToLoad > 1 && !hasMore)) return;
+
+    const paramsKey = { 
+      page: pageToLoad, 
+      pageSize: DEFAULT_PAGE_SIZE, 
+      tag, 
+      search 
+    };
+
+    // 检查参数是否与上次加载相同，避免重复请求
+    if (lastLoadedParams.current && 
+        JSON.stringify(lastLoadedParams.current) === JSON.stringify(paramsKey) && 
+        !reset) {
+      return;
+    }
+
+    try {
+      if (reset || pageToLoad === 1) {
+        setLoading(true);
+        setAllArticles([]);
+        setCurrentPage(1);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
+      setError(null);
+      const data = await getArticles(paramsKey);
+      
+      if (reset || pageToLoad === 1) {
+        // 重置或第一页加载
+        setAllArticles(data.items);
+        setCurrentPage(1);
+      } else {
+        // 加载更多
+        setAllArticles(prev => [...prev, ...data.items]);
+        setCurrentPage(pageToLoad);
+      }
+      
+      // 检查是否还有更多数据
+      setHasMore(data.items.length === DEFAULT_PAGE_SIZE);
+      lastLoadedParams.current = paramsKey;
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载文章失败');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [getArticles, tag, search, loadingMore, hasMore]);
+
+  // 无限滚动处理函数
+  const handleScroll = useCallback(() => {
+    const scrollElement = document.documentElement;
+    const scrollTop = scrollElement.scrollTop;
+    const scrollHeight = scrollElement.scrollHeight;
+    const clientHeight = scrollElement.clientHeight;
+    
+    // 检查是否接近底部
+    if (scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD && hasMore && !loadingMore) {
+      loadArticles(currentPage + 1);
+    }
+  }, [currentPage, hasMore, loadingMore, loadArticles]);
 
   // 加载标签列表的副作用
   useEffect(() => {
@@ -169,49 +230,23 @@ export const ArticleListPage = () => {
 
   // 初始化上次加载参数记录
   useEffect(() => {
-    if (listData && !lastLoadedParams.current) {
+    if (allArticles.length > 0 && !lastLoadedParams.current) {
       lastLoadedParams.current = {
-        page: listData.meta.page,
-        pageSize: listData.meta.pageSize,
+        page: currentPage,
+        pageSize: DEFAULT_PAGE_SIZE,
         tag,
         search
       };
     }
-  }, [listData, tag, search]);
+  }, [allArticles, currentPage, tag, search]);
 
-  // 加载文章列表的副作用
+  // 加载文章列表的副作用 - 初始加载和筛选条件变化时重置
   useEffect(() => {
     let ignore = false;
-    const paramsKey = { page, pageSize, tag, search };
-    // 检查参数是否与上次加载相同，避免重复请求
-    const matchesLast =
-      !!lastLoadedParams.current &&
-      lastLoadedParams.current.page === paramsKey.page &&
-      lastLoadedParams.current.pageSize === paramsKey.pageSize &&
-      lastLoadedParams.current.tag === paramsKey.tag &&
-      lastLoadedParams.current.search === paramsKey.search;
-
-    if (listData && matchesLast) {
-      return;
-    }
 
     const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getArticles(paramsKey);
-        if (!ignore) {
-          setListData(data);
-          lastLoadedParams.current = paramsKey;
-        }
-      } catch (err) {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : '加载文章失败');
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+      if (!ignore) {
+        await loadArticles(1, true);
       }
     };
 
@@ -220,17 +255,17 @@ export const ArticleListPage = () => {
     return () => {
       ignore = true;
     };
-  }, [getArticles, listData, page, pageSize, setListData, tag, search]);
+  }, [tag, search]);
 
-  // 处理分页变化
-  const handlePaginationChange = (nextPage: number, nextPageSize?: number) => {
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      params.set('page', String(nextPage));
-      params.set('pageSize', String(nextPageSize ?? pageSize));
-      return params;
-    });
-  };
+  // 添加滚动事件监听器
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
+
+  // 无限滚动机制不再需要分页变化处理函数
 
   // 处理标签筛选变化
   const handleSelectTag = (tagSlug?: string) => {
@@ -241,8 +276,8 @@ export const ArticleListPage = () => {
       } else {
         params.delete('tag');
       }
-      params.set('page', '1'); // 切换标签时重置到第一页
-      params.set('pageSize', String(pageSize));
+      params.delete('page'); // 无限滚动不需要页码参数
+      params.delete('pageSize'); // 无限滚动不需要页大小参数
       return params;
     });
   };
@@ -264,8 +299,8 @@ export const ArticleListPage = () => {
       } else {
         params.delete('search');
       }
-      params.set('page', '1'); // 搜索时重置到第一页
-      params.set('pageSize', String(pageSize));
+      params.delete('page'); // 无限滚动不需要页码参数
+      params.delete('pageSize'); // 无限滚动不需要页大小参数
       return params;
     });
   };
@@ -275,8 +310,8 @@ export const ArticleListPage = () => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       params.delete('search');
-      params.set('page', '1'); // 清除搜索时重置到第一页
-      params.set('pageSize', String(pageSize));
+      params.delete('page'); // 无限滚动不需要页码参数
+      params.delete('pageSize'); // 无限滚动不需要页大小参数
       return params;
     });
   }; 
@@ -350,7 +385,7 @@ export const ArticleListPage = () => {
       </div>
 
       {/* 选择控制栏 - 仅在列表有数据时显示 */}
-      {listData && listData.items.length > 0 && (
+      {allArticles.length > 0 && (
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -393,10 +428,10 @@ export const ArticleListPage = () => {
         <Alert type="error" title={error} showIcon />
       ) : null}
 
-      {/* 文章列表 */}
+      {/* 文章列表 - 无限滚动 */}
       <List
         itemLayout="vertical"
-        dataSource={listData?.items ?? []}
+        dataSource={allArticles}
         loading={loading && !error}
         renderItem={(article) => (
           <List.Item key={article.id}>
@@ -430,18 +465,26 @@ export const ArticleListPage = () => {
         }}
       />
 
-      {/* 分页组件 */}
-      {listData && listData.meta.totalItems > 0 ? (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Pagination
-            current={listData.meta.page}
-            pageSize={listData.meta.pageSize}
-            total={listData.meta.totalItems}
-            showSizeChanger={false}
-            onChange={handlePaginationChange}
-          />
+      {/* 加载更多指示器 */}
+      {loadingMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <Spin size="large" tip="加载更多文章..." />
         </div>
-      ) : null}
+      )}
+
+      {/* 没有更多数据的提示 */}
+      {!hasMore && allArticles.length > 0 && (
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '20px', 
+          color: '#666',
+          fontSize: '14px'
+        }}>
+          已加载全部文章
+        </div>
+      )}
+
+      {/* 无限滚动机制不再需要分页组件 */}
     </div>
   );
 };
