@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Empty, List, Pagination, Select, Checkbox, message, Modal, Space } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Alert, Button, Empty, List, Pagination, Select, Checkbox, message, Modal, Space, Input } from 'antd';
+import { PlusOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import type { PaginatedArticles, Tag } from '@shared/types';
 import { ArticleCard } from '../components/ArticleCard';
 import { useInitialData } from '../state/InitialDataContext';
@@ -36,7 +36,7 @@ export const ArticleListPage = () => {
   const [deleteLoading, setDeleteLoading] = useState(false); // 批量删除操作进行中状态
   
   // 记录上次加载的参数，避免重复请求
-  const lastLoadedParams = useRef<{ page: number; pageSize: number; tag?: string } | null>(null);
+  const lastLoadedParams = useRef<{ page: number; pageSize: number; tag?: string; search?: string } | null>(null);
 
   // 从URL参数中解析当前页码、每页数量和标签筛选条件
   const page = useMemo(() => Number(searchParams.get('page') ?? '1') || 1, [searchParams]);
@@ -45,6 +45,7 @@ export const ArticleListPage = () => {
     [searchParams]
   );
   const tag = useMemo(() => searchParams.get('tag') ?? undefined, [searchParams]);
+  const search = useMemo(() => searchParams.get('search') ?? undefined, [searchParams]);
 
   // 从全局状态中获取当前的文章列表数据
   const listData: PaginatedArticles | undefined = state.view === 'list' ? state.listData : undefined;
@@ -172,21 +173,23 @@ export const ArticleListPage = () => {
       lastLoadedParams.current = {
         page: listData.meta.page,
         pageSize: listData.meta.pageSize,
-        tag
+        tag,
+        search
       };
     }
-  }, [listData, tag]);
+  }, [listData, tag, search]);
 
   // 加载文章列表的副作用
   useEffect(() => {
     let ignore = false;
-    const paramsKey = { page, pageSize, tag };
+    const paramsKey = { page, pageSize, tag, search };
     // 检查参数是否与上次加载相同，避免重复请求
     const matchesLast =
       !!lastLoadedParams.current &&
       lastLoadedParams.current.page === paramsKey.page &&
       lastLoadedParams.current.pageSize === paramsKey.pageSize &&
-      lastLoadedParams.current.tag === paramsKey.tag;
+      lastLoadedParams.current.tag === paramsKey.tag &&
+      lastLoadedParams.current.search === paramsKey.search;
 
     if (listData && matchesLast) {
       return;
@@ -217,7 +220,7 @@ export const ArticleListPage = () => {
     return () => {
       ignore = true;
     };
-  }, [getArticles, listData, page, pageSize, setListData, tag]);
+  }, [getArticles, listData, page, pageSize, setListData, tag, search]);
 
   // 处理分页变化
   const handlePaginationChange = (nextPage: number, nextPageSize?: number) => {
@@ -239,6 +242,40 @@ export const ArticleListPage = () => {
         params.delete('tag');
       }
       params.set('page', '1'); // 切换标签时重置到第一页
+      params.set('pageSize', String(pageSize));
+      return params;
+    });
+  };
+
+  // 本地搜索输入状态
+  const [localSearch, setLocalSearch] = useState(search || '');
+
+  // 同步URL搜索参数到本地搜索状态
+  useEffect(() => {
+    setLocalSearch(search || '');
+  }, [search]);
+
+  // 处理搜索变化
+  const handleSearch = (value: string) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (value.trim()) {
+        params.set('search', value.trim());
+      } else {
+        params.delete('search');
+      }
+      params.set('page', '1'); // 搜索时重置到第一页
+      params.set('pageSize', String(pageSize));
+      return params;
+    });
+  };
+
+  // 清除搜索
+  const handleClearSearch = () => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete('search');
+      params.set('page', '1'); // 清除搜索时重置到第一页
       params.set('pageSize', String(pageSize));
       return params;
     });
@@ -270,6 +307,22 @@ export const ArticleListPage = () => {
             options={tagOptions}
             loading={tagsLoading}
           />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Input.Search
+              placeholder="搜索文章标题与摘要"
+              allowClear
+              style={{ width: 280 }}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              onSearch={handleSearch}
+              enterButton={<SearchOutlined />}
+            />
+            {search && (
+              <span style={{ fontSize: '14px', color: '#666' }}>
+                搜索: "{search}"
+              </span>
+            )}
+          </div>
         </div>
         
         {/* 操作按钮区域 */}
@@ -361,7 +414,20 @@ export const ArticleListPage = () => {
             </div>
           </List.Item>
         )}
-        locale={{ emptyText: <Empty description="暂无文章" /> }}
+        locale={{
+          emptyText: search ? (
+            <Empty 
+              description={`没有找到包含"${search}"的文章`}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            >
+              <Button type="link" onClick={handleClearSearch}>
+                清除搜索条件
+              </Button>
+            </Empty>
+          ) : (
+            <Empty description="暂无文章" />
+          )
+        }}
       />
 
       {/* 分页组件 */}
