@@ -4,7 +4,7 @@ import morgan from 'morgan';
 import path from 'node:path';
 import type { AppConfig } from './config/env';
 import type { AppDependencies } from './config/context';
-import { createApiRouter } from './api';
+import { createApiRouter } from './api/createApiRouter';
 import { createSsrMiddleware } from './ssr/middleware';
 import { errorHandler } from './middleware/errorHandler';
 

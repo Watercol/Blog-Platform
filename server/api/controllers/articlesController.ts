@@ -14,7 +14,7 @@ import {
   listAllTags,
   listArticles,
   updateArticle
-} from '../../services/articleService';
+} from './articleService';
 
 const hardDeleteSchema = z
   .object({

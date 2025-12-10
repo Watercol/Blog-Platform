@@ -6,10 +6,18 @@
   "scripts": {
     "dev": "tsx watch --ignore \"vite.config.ts.timestamp-*\" server/index.ts",
     "dev:db": "tsx server/scripts/run-migrations.ts",
-    "build": "rimraf dist && tsc -p tsconfig.server.json && vite build && vite build --ssr src/entries/server.tsx",
+    "build": "npm run build:server && npm run build:client && npm run build:ssr",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:client": "vite build",
+    "build:ssr": "vite build --ssr src/entries/server.tsx",
     "start": "node dist/server/index.js",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "vitest"
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "clean": "rimraf dist coverage .cache .eslintcache"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

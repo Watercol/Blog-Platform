@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { AppDependencies } from '../config/context';
-import { createArticlesRouter } from './articlesRouter';
+import { createArticlesRouter } from './createArticlesRouter';
 import { notFoundHandler } from '../middleware/notFound';
 import { errorHandler } from '../middleware/errorHandler';
 

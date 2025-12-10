@@ -1,7 +1,7 @@
 import { match } from 'path-to-regexp';
 import type { IncomingMessage } from 'node:http';
 import type { AppDependencies } from '../config/context';
-import { listArticles, getArticleDetail } from '../services/articleService';
+import { listArticles, getArticleDetail } from '../api/controllers/articleService';
 import { listArticlesQuerySchema } from '../api/validators/articleSchemas';
 import type { AppInitialState } from '@shared/types';
 
