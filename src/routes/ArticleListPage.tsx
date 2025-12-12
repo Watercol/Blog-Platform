@@ -111,8 +111,8 @@ export const ArticleListPage = () => {
       onOk: async () => {
         try {
           setDeleteLoading(true);
-          // 调用API执行批量删除
-          await removeArticles(selectedArticles);
+          // 调用API执行批量删除（硬删除）
+          await removeArticles(selectedArticles, true);
           
           // 删除成功提示
           message.success(`成功删除 ${selectedArticles.length} 篇文章`);

@@ -16,10 +16,6 @@ export const articleIdParamSchema = z.object({
 
 export const articleMutationSchema = z.object({
   title: z.string().min(3).max(180),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use kebab-case alphanumeric characters')
-    .optional(),
   excerpt: z.string().max(512).optional(),
   content: z.string().min(20),
   tags: z.array(z.string().min(1)).max(20),

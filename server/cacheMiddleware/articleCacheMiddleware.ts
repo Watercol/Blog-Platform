@@ -33,14 +33,14 @@ export const articleCacheMiddleware = (req: express.Request, res: express.Respon
       
       // 根据请求类型设置不同的缓存策略
       if (req.path === '/api/articles' || req.path === '/api/articles/') {
-        // 文章列表：较短的缓存时间（1分钟），因为列表可能频繁更新
-        res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+        // 文章列表：使用协商缓存，每次都向服务器验证，确保列表实时性
+        res.setHeader('Cache-Control', 'no-cache');
       } else if (req.path.match(/\/api\/articles\/[^\/]+$/)) {
-        // 文章详情：较长的缓存时间（5分钟），因为单篇文章更新频率较低
-        res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+        // 文章详情：使用协商缓存，确保内容实时性
+        res.setHeader('Cache-Control', 'no-cache');
       } else {
-        // 其他文章相关API：默认缓存策略
-        res.setHeader('Cache-Control', 'public, max-age=180, must-revalidate');
+        // 其他文章相关API：默认使用协商缓存
+        res.setHeader('Cache-Control', 'no-cache');
       }
       
       // 检查缓存有效性
@@ -58,41 +58,6 @@ export const articleCacheMiddleware = (req: express.Request, res: express.Respon
     
     return originalSend(body);
   };
-  
-  next();
-};
-
-/**
- * 文章列表缓存中间件（更激进的缓存策略）
- * 对文章列表页面使用更长的缓存时间
- */
-export const articleListCacheMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // 只对文章列表路由应用
-  if (req.path === '/api/articles' || req.path === '/api/articles/') {
-    const originalSend = res.send.bind(res);
-    
-    res.send = function(body?: any): express.Response {
-      if (typeof body === 'string' || Buffer.isBuffer(body) || (body && typeof body === 'object')) {
-        const content = JSON.stringify(body);
-        const hash = crypto.createHash('md5').update(content).digest('hex');
-        const etag = `"${hash}"`;
-        
-        res.setHeader('ETag', etag);
-        res.setHeader('Last-Modified', new Date().toUTCString());
-        
-        // 文章列表使用较短的缓存时间，但允许stale-while-revalidate
-        res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-        
-        const clientETag = req.headers['if-none-match'];
-        if (clientETag && clientETag === etag) {
-          res.status(304);
-          return res.end();
-        }
-      }
-      
-      return originalSend(body);
-    };
-  }
   
   next();
 };

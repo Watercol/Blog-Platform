@@ -10,7 +10,6 @@ import { aiWriterService, type AIWritingRequest } from '../services/aiWriterServ
 // 文章创建表单字段定义
 interface FormValues {
   title: string;
-  slug?: string;
   excerpt?: string;
   content: string;
   tags: string[];
@@ -69,7 +68,6 @@ export const ArticleCreatePage = () => {
       // 调用创建文章API
       const response = await createArticle({
         title: values.title.trim(),
-        slug: values.slug?.trim() || undefined,
         excerpt: values.excerpt?.trim() || undefined,
         content: values.content,
         tags,
@@ -82,9 +80,9 @@ export const ArticleCreatePage = () => {
         authorEmail: values.authorEmail
       });
       
-      // 创建成功，显示消息并导航到文章详情页
+      // 创建成功，显示消息并导航到文章列表页
       messageApi.success('文章创建成功');
-      navigate(`/articles/${response.slug}`);
+      navigate('/', { replace: true });
     } catch (error) {
       // 错误处理：显示具体的错误信息
       const messageText = error instanceof Error ? error.message : '创建文章失败';
@@ -234,14 +232,6 @@ export const ArticleCreatePage = () => {
             rules={[{ required: true, message: '请输入文章标题' }]}
           >
             <Input placeholder="请输入标题" />
-          </Form.Item>
-
-          <Form.Item 
-            label="自定义 Slug" 
-            name="slug" 
-            tooltip="可留空，系统将根据标题生成"
-          >
-            <Input placeholder="例如：my-first-post" />
           </Form.Item>
 
           <Form.Item 
@@ -395,7 +385,7 @@ export const ArticleCreatePage = () => {
           {/* 错误提示 */}
           {aiError && (
             <Alert 
-              message="AI写作错误" 
+              title="AI写作错误" 
               description={aiError} 
               type="error" 
               showIcon 
@@ -436,7 +426,7 @@ export const ArticleCreatePage = () => {
           {/* API配置提示 */}
           {!aiWriterService.isConfigured() && (
             <Alert
-              message="演示模式"
+              title="演示模式"
               description="当前使用演示数据。要使用真实的AI写作功能，请在.env文件中设置VITE_OPENAI_API_KEY环境变量。"
               type="info"
               showIcon

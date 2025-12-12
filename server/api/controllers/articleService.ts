@@ -1,4 +1,5 @@
 import type { Pool } from 'mysql2/promise';
+import { pinyin } from 'pinyin';
 import { slugify } from '../utils/slug';
 import {
   createArticle as createArticleRecord,
@@ -126,7 +127,14 @@ export const createArticle = async (
   payload: ArticleMutationPayload,
   cache?: RedisCache
 ): Promise<{ id: number; slug: string }> => {
-  const slugBase = payload.slug ? payload.slug : slugify(payload.title);
+  // Generate slug using Pinyin + Timestamp
+  const pinyinTitle = pinyin(payload.title, {
+    style: pinyin.STYLE_NORMAL,
+    heteronym: false
+  }).flat().join('');
+  const cleanPinyin = pinyinTitle.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const slugBase = `${cleanPinyin}-${Date.now()}`;
+  
   const slug = await ensureSlugUniqueness(pool, slugBase);
 
   let authorId = payload.authorId;
@@ -154,6 +162,11 @@ export const createArticle = async (
   if (cache) {
     await cache.invalidateArticleCaches();
     console.log('文章创建后清除缓存');
+    
+    // 延时双删，防止并发读写导致的脏数据
+    setTimeout(() => {
+      cache.invalidateArticleCaches().catch((err) => console.error('延时双删失败:', err));
+    }, 500);
   }
 
   return { id, slug };
@@ -165,8 +178,14 @@ export const updateArticle = async (
   payload: ArticleMutationPayload,
   cache?: RedisCache
 ): Promise<{ slug: string }> => {
-  const slugBase = payload.slug ? payload.slug : slugify(payload.title);
-  const slug = await ensureSlugUniqueness(pool, slugBase, id);
+  // Fetch existing article to preserve slug if not provided
+  const existingArticle = await findArticleById(pool, id);
+  if (!existingArticle) {
+    throw new Error(`Article with id ${id} not found`);
+  }
+
+  // Slug is immutable or auto-generated on creation, so we keep the existing one
+  const slug = existingArticle.slug;
 
   let authorId = payload.authorId;
   if (!authorId && payload.authorName && payload.authorEmail) {
@@ -193,6 +212,11 @@ export const updateArticle = async (
   if (cache) {
     await cache.invalidateArticleCaches();
     console.log('文章更新后清除缓存');
+    
+    // 延时双删，防止并发读写导致的脏数据
+    setTimeout(() => {
+      cache.invalidateArticleCaches().catch((err) => console.error('延时双删失败:', err));
+    }, 500);
   }
 
   return { slug };
@@ -210,6 +234,11 @@ export const deleteArticles = async (
   if (cache && affected > 0) {
     await cache.invalidateArticleCaches();
     console.log(`文章删除后清除缓存，影响记录数: ${affected}`);
+    
+    // 延时双删，防止并发读写导致的脏数据
+    setTimeout(() => {
+      cache.invalidateArticleCaches().catch((err) => console.error('延时双删失败:', err));
+    }, 500);
   }
 
   return affected;

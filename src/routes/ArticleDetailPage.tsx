@@ -14,7 +14,6 @@ interface ArticleEditForm {
   title: string;
   summary: string; // 修复：改为summary以匹配表单字段名
   content: string;
-  slug: string;
 }
 
 export const ArticleDetailPage = () => {
@@ -72,8 +71,7 @@ export const ArticleDetailPage = () => {
     form.setFieldsValue({
       title: detail.title,
       summary: detail.excerpt, // 修复：保持summary字段名
-      content: detail.content,
-      slug: detail.slug
+      content: detail.content
     });
     setEditing(true);
   };
@@ -96,7 +94,6 @@ export const ArticleDetailPage = () => {
         title: values.title,
         excerpt: values.summary, // 修复：使用summary字段
         content: values.content,
-        slug: values.slug,
         tags: detail.tags.map(tag => tag.name), // 使用原有的标签
         status: detail.status || 'published', // 使用原有的状态或默认值
         authorName: detail.author, // 使用原有的作者名
@@ -109,18 +106,12 @@ export const ArticleDetailPage = () => {
         title: values.title,
         excerpt: values.summary, // 修复：更新excerpt字段
         content: values.content,
-        slug: values.slug,
         updatedAt: new Date().toISOString() // 更新最后修改时间
       };
       setDetailData(updatedDetail);
       
       message.success('文章更新成功');
       setEditing(false);
-      
-      // 如果slug发生变化，需要重新导航
-      if (values.slug !== detail.slug) {
-        navigate(`/articles/${values.slug}`, { replace: true });
-      }
     } catch (err) {
       antdMessage.error(err instanceof Error ? err.message : '更新失败');
     } finally {
@@ -298,19 +289,6 @@ export const ArticleDetailPage = () => {
                 placeholder="请输入文章内容（支持HTML格式）" 
                 style={{ fontFamily: 'monospace' }}
               />
-            </Form.Item>
-
-            <Form.Item
-              label="文章标识（Slug）"
-              name="slug"
-              rules={[
-                { required: true, message: '请输入文章标识' },
-                { pattern: /^[a-z0-9-]+$/, message: 'Slug只能包含小写字母、数字和连字符' },
-                { min: 1, max: 100, message: 'Slug长度在1-100个字符之间' }
-              ]}
-              extra="文章的唯一标识，用于URL中，只能包含小写字母、数字和连字符"
-            >
-              <Input placeholder="请输入文章标识" />
             </Form.Item>
           </Form>
         ) : (

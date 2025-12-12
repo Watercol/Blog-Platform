@@ -8,7 +8,7 @@ import { createApiRouter } from './api/createApiRouter';
 import { createSsrMiddleware } from './ssr/ssrMiddleware';
 import { errorHandler } from './errorMiddleware/errorHandler';
 import { staticCacheMiddleware } from './cacheMiddleware/staticCacheMiddleware';
-import { articleCacheMiddleware, articleListCacheMiddleware } from './cacheMiddleware/articleCacheMiddleware';
+import { articleCacheMiddleware } from './cacheMiddleware/articleCacheMiddleware';
 
 export const createApp = async (config: AppConfig, deps: AppDependencies) => {
   const app = express();
@@ -39,7 +39,6 @@ export const createApp = async (config: AppConfig, deps: AppDependencies) => {
 
   //应用文章API缓存中间件
   app.use(articleCacheMiddleware);
-  app.use(articleListCacheMiddleware);
   
   //注册API路由
   app.use('/api', createApiRouter(deps));

@@ -38,7 +38,6 @@ export interface PaginatedArticles {
 
 export interface ArticleMutationPayload {
   title: string;
-  slug?: string;
   excerpt?: string;
   content: string;
   tags: string[];
